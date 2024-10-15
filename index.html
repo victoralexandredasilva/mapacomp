@@ -86,9 +86,10 @@
     <div id="imageModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-          <a-scene embedded="true" vr-mode-ui="enabled: false" arjs="trackingMethod: best;">
-                <a-sky id="panorama" src="your-panorama-image-path" rotation="0 -90 0"></a-sky>
-          </a-scene>
+          <a-scene embedded="true" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+    <a-sky id="panorama" src="your-panorama-image-path" rotation="0 -90 0"></a-sky>
+</a-scene>
+
 
 
 
