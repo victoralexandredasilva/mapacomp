@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapa com Leaflet e Transição de Imagens</title>
+    <title>Mapa com Leaflet e Panoramas 360°</title>
     
     <!-- Incluindo o CSS do Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     
     <style>
         /* Estilização para o mapa e a modal */
@@ -32,14 +31,9 @@
 
         .modal-content {
             position: relative;
-            width: 90%;
-            max-width: 1200px;
-            height: 500px;
-        }
-
-        .modal-content a-scene {
-            width: 100%;
-            height: 100%;
+            width: 70%; /* Largura reduzida para 70% */
+            max-width: 800px; /* Largura máxima ajustada */
+            height: 50%; /* Altura reduzida para 50% */
         }
 
         /* Botão para fechar a modal */
@@ -82,30 +76,24 @@
     <!-- Div para o mapa -->
     <div id="map"></div>
 
-    <!-- Modal para exibir o panorama 360° com A-Frame -->
+    <!-- Modal para exibir o panorama 360° -->
     <div id="imageModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-        <a-scene embedded="true" vr-mode-ui="enabled: false">
-            <a-sky id="panorama" src="your-panorama-image-path" rotation="0 -90 0"></a-sky>
-        </a-scene>
-
-
-
-
-
+            <div id="viewer"></div> <!-- Div para o Panolens.js -->
         </div>
     </div>
 
-    <!-- Incluindo o JavaScript do Leaflet -->
+    <!-- Incluindo o JavaScript do Leaflet e Panolens -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/panolens@0.12.0/build/panolens.min.js"></script>
+    
     <script>
         // Array de lugares com coordenadas e informações
         const places = [
             { coordinates: [-24.987859731678746, -53.44917952674408], image: 'imagem1.jpg', title: 'Local 1', description: 'Descrição do Local 1.' },
             { coordinates: [-24.987859, -53.449079], image: 'imagem2.jpg', title: 'Local 2', description: 'Descrição do Local 2.' },
-            { coordinates: [-24.98670585797653, -53.448512252210186], image: 'imagem2.jpg', title: 'Estacionamento', description:'Estacionamento da Unioeste - Rua Universitária'}
+            { coordinates: [-24.98670585797653, -53.448512252210186], image: 'estacionamento.jpg', title: 'Estacionamento', description: 'Estacionamento da Unioeste - Rua Universitária' }
             // Adicione mais locais aqui com suas imagens
         ];
 
@@ -124,7 +112,7 @@
 
             // Conteúdo do popup com imagem, título e descrição
             const popupContent = `
-                <img src="${place.image}" alt="Imagem do local" id="popupImage" />
+                <img src="${place.image}" alt="Imagem do local" id="popupImage" data-image="${place.image}" />
                 <h3>${place.title}</h3>
                 <p>${place.description}</p>
             `;
@@ -156,29 +144,28 @@
         // Evento de clique na imagem do popup para abrir o panorama
         document.addEventListener('click', function(event) {
             if (event.target && event.target.id === 'popupImage') {
-                const panoramaSrc = 'ft_ft.jpg'; // Define a imagem 'panorama.jpg'
-                document.getElementById('panorama').setAttribute('src', panoramaSrc); // Define o panorama no A-Frame
-                modal.style.display = 'flex'; // Exibe a modal com o panorama 360°
-                
-                // Simula o clique no botão VR logo após o carregamento da cena
-                setTimeout(function() {
-                    const scene = document.querySelector('a-scene');
-                    if (scene && scene.enterVR) {
-                        scene.enterVR();
-                    }
-                }, 1000); // Adiciona um pequeno atraso para garantir que o panorama seja carregado
+                const panoramaSrc = event.target.getAttribute('data-image'); // Pega o caminho da imagem
+                openPanorama(panoramaSrc); // Chama a função para abrir o panorama
             }
         });
-                if (navigator.xr) {
-                    navigator.xr.requestSession = async () => {
-                        throw new Error('WebXR disabled');
-                    };
-                }
-            
-                if (navigator.getVRDisplays) {
-                    navigator.getVRDisplays = async () => [];
-                }
 
+        // Função para abrir o panorama usando Panolens.js
+        function openPanorama(panoramaSrc) {
+            modal.style.display = 'flex'; // Exibe a modal com o panorama 360°
+
+            // Limpa o conteúdo anterior, se houver
+            document.getElementById('viewer').innerHTML = '';
+
+            // Inicializando o Panolens
+            const panorama = new PANOLENS.ImagePanorama(panoramaSrc);
+            const viewer = new PANOLENS.Viewer({
+                container: document.getElementById('viewer'),
+                autoRotate: true,
+                autoRotateSpeed: 0.5
+            });
+
+            viewer.add(panorama); // Adiciona o panorama ao visualizador
+        }
     </script>
 </body>
 </html>
