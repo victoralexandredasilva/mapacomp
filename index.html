@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapa com Leaflet e Panoramas 360°</title>
+    <title>Mapa com Leaflet e Transição de Imagens</title>
     
     <!-- Incluindo o CSS do Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
@@ -14,10 +14,11 @@
             height: 100vh;
             width: 100vw;
         }
-
+    
+        /* Modal para exibir o panorama 360° */
         /* Modal para exibir o panorama 360° */
         .modal {
-            display: none; /* Inicialmente, a modal fica oculta */
+            display: flex; /* Flexbox para alinhar */
             position: fixed;
             z-index: 1000;
             left: 0;
@@ -25,18 +26,26 @@
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0.8);
-            justify-content: center;
-            align-items: center;
+            justify-content: center; /* Centraliza horizontalmente */
+            align-items: center; /* Centraliza verticalmente */
         }
 
         .modal-content {
             position: relative;
-            width: 70%; /* Largura reduzida para 70% */
-            max-width: 800px; /* Largura máxima ajustada */
-            height: 50%; /* Altura reduzida para 50% */
+            max-width: 90%; /* Largura ajustada para no máximo 90% da tela */
+            max-height: 90%; /* Altura ajustada para no máximo 90% da tela */
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
-        /* Botão para fechar a modal */
+        #viewer {
+            width: auto;
+            height: auto;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
         .close {
             position: absolute;
             top: 10px;
@@ -47,30 +56,32 @@
             z-index: 1001; /* Garante que o botão fique à frente da modal */
         }
 
+    
         /* Estilização do popup */
         .leaflet-popup-content {
             text-align: center;
             font-size: 18px;
         }
-
+    
         .leaflet-popup-content img {
             width: 200px;
             height: auto;
             cursor: pointer;
             margin-bottom: 10px;
         }
-
+    
         .leaflet-popup-content h3 {
             margin-top: 10px;
             font-size: 20px;
             font-weight: bold;
         }
-
+    
         .leaflet-popup-content p {
             margin-top: 10px;
             font-size: 16px;
         }
     </style>
+    
 </head>
 <body>
     <!-- Div para o mapa -->
@@ -80,13 +91,13 @@
     <div id="imageModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <div id="viewer"></div> <!-- Div para o Panolens.js -->
+            <div id="viewer"></div> <!-- Div para o renderizador 3D -->
         </div>
     </div>
 
-    <!-- Incluindo o JavaScript do Leaflet e Panolens -->
+    <!-- Incluindo o JavaScript do Leaflet -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/panolens@0.12.0/build/panolens.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     
     <script>
         // Array de lugares com coordenadas e informações
@@ -112,7 +123,7 @@
 
             // Conteúdo do popup com imagem, título e descrição
             const popupContent = `
-                <img src="${place.image}" alt="Imagem do local" id="popupImage" data-image="${place.image}" />
+                <img src="${place.image}" alt="Imagem do local" id="popupImage" />
                 <h3>${place.title}</h3>
                 <p>${place.description}</p>
             `;
@@ -144,27 +155,53 @@
         // Evento de clique na imagem do popup para abrir o panorama
         document.addEventListener('click', function(event) {
             if (event.target && event.target.id === 'popupImage') {
-                const panoramaSrc = event.target.getAttribute('data-image'); // Pega o caminho da imagem
+                const panoramaSrc = 'ft_ft.jpg'; // Define a imagem 'panorama.jpg'
                 openPanorama(panoramaSrc); // Chama a função para abrir o panorama
             }
         });
 
-        // Função para abrir o panorama usando Panolens.js
+        // Função para abrir o panorama
         function openPanorama(panoramaSrc) {
             modal.style.display = 'flex'; // Exibe a modal com o panorama 360°
 
-            // Limpa o conteúdo anterior, se houver
-            document.getElementById('viewer').innerHTML = '';
+            // Inicializando o Three.js
+            const viewer = new THREE.WebGLRenderer();
+            viewer.setSize(window.innerWidth * 0.7, window.innerHeight * 0.5); // Ajusta o tamanho da visualização
+            document.getElementById('viewer').appendChild(viewer.domElement);
 
-            // Inicializando o Panolens
-            const panorama = new PANOLENS.ImagePanorama(panoramaSrc);
-            const viewer = new PANOLENS.Viewer({
-                container: document.getElementById('viewer'),
-                autoRotate: true,
-                autoRotateSpeed: 0.5
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const geometry = new THREE.SphereGeometry(500, 60, 40);
+            geometry.scale(-1, 1, 1); // Inverter a esfera para visualizar de dentro
+
+            // Carregar a textura panorâmica
+            const textureLoader = new THREE.TextureLoader();
+            const texture = textureLoader.load(panoramaSrc, function() {
+                viewer.render(scene, camera); // Renderiza a cena após a textura ser carregada
             });
 
-            viewer.add(panorama); // Adiciona o panorama ao visualizador
+            const material = new THREE.MeshBasicMaterial({ map: texture });
+            const sphere = new THREE.Mesh(geometry, material);
+            scene.add(sphere);
+
+            // Posição da câmera
+            camera.position.set(0, 0, 0.1);
+
+            // Função de animação
+            function animate() {
+                requestAnimationFrame(animate);
+                sphere.rotation.y += 0.001; // Gira lentamente o panorama
+                viewer.render(scene, camera);
+            }
+
+            animate();
+
+            // Ajuste o tamanho do renderizador se a janela for redimensionada
+            window.addEventListener('resize', function() {
+                viewer.setSize(window.innerWidth * 0.7, window.innerHeight * 0.5);
+                camera.aspect = (window.innerWidth * 0.7) / (window.innerHeight * 0.5);
+                camera.updateProjectionMatrix();
+            });
         }
     </script>
 </body>
