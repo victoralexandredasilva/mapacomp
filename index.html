@@ -16,9 +16,8 @@
         }
     
         /* Modal para exibir o panorama 360° */
-        /* Modal para exibir o panorama 360° */
         .modal {
-            display: flex; /* Flexbox para alinhar */
+            display: none; /* Flexbox para alinhar */
             position: fixed;
             z-index: 1000;
             left: 0;
@@ -56,32 +55,30 @@
             z-index: 1001; /* Garante que o botão fique à frente da modal */
         }
 
-    
         /* Estilização do popup */
         .leaflet-popup-content {
             text-align: center;
             font-size: 18px;
         }
-    
+
         .leaflet-popup-content img {
             width: 200px;
             height: auto;
             cursor: pointer;
             margin-bottom: 10px;
         }
-    
+
         .leaflet-popup-content h3 {
             margin-top: 10px;
             font-size: 20px;
             font-weight: bold;
         }
-    
+
         .leaflet-popup-content p {
             margin-top: 10px;
             font-size: 16px;
         }
     </style>
-    
 </head>
 <body>
     <!-- Div para o mapa -->
@@ -100,6 +97,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     
     <script>
+        // Variável de controle para evitar múltiplos carregamentos de panorama
+        let panoramaLoaded = false;
+
         // Array de lugares com coordenadas e informações
         const places = [
             { coordinates: [-24.987859731678746, -53.44917952674408], image: 'imagem1.jpg', title: 'Local 1', description: 'Descrição do Local 1.' },
@@ -143,12 +143,16 @@
 
         closeModal.onclick = function() {
             modal.style.display = 'none'; // Fecha a modal
+            panoramaLoaded = false; // Redefine a variável de controle
+            document.getElementById('viewer').innerHTML = ''; // Limpa o conteúdo do viewer
         }
 
         // Fecha a modal se o usuário clicar fora da área da imagem
         window.onclick = function(event) {
             if (event.target == modal) {
                 modal.style.display = 'none'; // Fecha a modal
+                panoramaLoaded = false; // Redefine a variável de controle
+                document.getElementById('viewer').innerHTML = ''; // Limpa o conteúdo do viewer
             }
         }
 
@@ -162,46 +166,50 @@
 
         // Função para abrir o panorama
         function openPanorama(panoramaSrc) {
-            modal.style.display = 'flex'; // Exibe a modal com o panorama 360°
+            if (!panoramaLoaded) {
+                modal.style.display = 'flex'; // Exibe a modal com o panorama 360°
 
-            // Inicializando o Three.js
-            const viewer = new THREE.WebGLRenderer();
-            viewer.setSize(window.innerWidth * 0.7, window.innerHeight * 0.5); // Ajusta o tamanho da visualização
-            document.getElementById('viewer').appendChild(viewer.domElement);
+                // Inicializando o Three.js
+                const viewer = new THREE.WebGLRenderer();
+                viewer.setSize(window.innerWidth * 0.7, window.innerHeight * 0.5); // Ajusta o tamanho da visualização
+                document.getElementById('viewer').appendChild(viewer.domElement);
 
-            const scene = new THREE.Scene();
-            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            const geometry = new THREE.SphereGeometry(500, 60, 40);
-            geometry.scale(-1, 1, 1); // Inverter a esfera para visualizar de dentro
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                const geometry = new THREE.SphereGeometry(500, 60, 40);
+                geometry.scale(-1, 1, 1); // Inverter a esfera para visualizar de dentro
 
-            // Carregar a textura panorâmica
-            const textureLoader = new THREE.TextureLoader();
-            const texture = textureLoader.load(panoramaSrc, function() {
-                viewer.render(scene, camera); // Renderiza a cena após a textura ser carregada
-            });
+                // Carregar a textura panorâmica
+                const textureLoader = new THREE.TextureLoader();
+                const texture = textureLoader.load(panoramaSrc, function() {
+                    viewer.render(scene, camera); // Renderiza a cena após a textura ser carregada
+                });
 
-            const material = new THREE.MeshBasicMaterial({ map: texture });
-            const sphere = new THREE.Mesh(geometry, material);
-            scene.add(sphere);
+                const material = new THREE.MeshBasicMaterial({ map: texture });
+                const sphere = new THREE.Mesh(geometry, material);
+                scene.add(sphere);
 
-            // Posição da câmera
-            camera.position.set(0, 0, 0.1);
+                // Posição da câmera
+                camera.position.set(0, 0, 0.1);
 
-            // Função de animação
-            function animate() {
-                requestAnimationFrame(animate);
-                sphere.rotation.y += 0.001; // Gira lentamente o panorama
-                viewer.render(scene, camera);
+                // Função de animação
+                function animate() {
+                    requestAnimationFrame(animate);
+                    sphere.rotation.y += 0.001; // Gira lentamente o panorama
+                    viewer.render(scene, camera);
+                }
+
+                animate();
+
+                // Ajuste o tamanho do renderizador se a janela for redimensionada
+                window.addEventListener('resize', function() {
+                    viewer.setSize(window.innerWidth * 0.7, window.innerHeight * 0.5);
+                    camera.aspect = (window.innerWidth * 0.7) / (window.innerHeight * 0.5);
+                    camera.updateProjectionMatrix();
+                });
+
+                panoramaLoaded = true; // Marca que o panorama foi carregado
             }
-
-            animate();
-
-            // Ajuste o tamanho do renderizador se a janela for redimensionada
-            window.addEventListener('resize', function() {
-                viewer.setSize(window.innerWidth * 0.7, window.innerHeight * 0.5);
-                camera.aspect = (window.innerWidth * 0.7) / (window.innerHeight * 0.5);
-                camera.updateProjectionMatrix();
-            });
         }
     </script>
 </body>
